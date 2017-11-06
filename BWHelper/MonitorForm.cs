@@ -112,8 +112,8 @@ namespace BWHelper
                     _viewForm = new ViewForm();
                     _viewForm.FormClosed += (s, e) => Application.Exit();
                 }
-                _viewForm.StartCapture(bwHwnd);
                 _viewForm.Show(this);
+                _viewForm.StartCapture(bwHwnd);
                 _viewForm.Activate();
                 this.Hide();
             }));

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace BWHelper
 {
@@ -35,6 +36,10 @@ namespace BWHelper
 
         EBPage page;
 
+
+
+        Plugins.PageControllerByMouseWheel _pageControllerByMouseWheel = new Plugins.PageControllerByMouseWheel();
+        List<Plugins.Input.BaseController> _pluginControllers = new List<Plugins.Input.BaseController>();
 
         protected override void WndProc(ref Message m)
         {
@@ -75,9 +80,37 @@ namespace BWHelper
             settings.Changed += (s, e) => page.Refresh();
 
             this.Text = "BW Helper " + Application.ProductVersion;
+
+
+
+            loadPlugins();
         }
 
+        private void loadPlugins()
+        {
+            string pluginsDirectory = Path.Combine(Path.GetDirectoryName(Application.ExecutablePath),"Plugins");
+            if (!Directory.Exists(pluginsDirectory)) return;
+            string[] dllFiles = Directory.GetFiles(pluginsDirectory, "BWHelper.Plugins.*.dll");
+            try
+            {
+                foreach (var dllFile in dllFiles)
+                {
+                    Assembly assembly = Assembly.LoadFrom(dllFile);
+                    foreach(var type in assembly.ExportedTypes)
+                    {
+                        if (typeof(Plugins.Input.BaseController).IsAssignableFrom(type))
+                        {
+                            var controller = (Plugins.Input.BaseController)Activator.CreateInstance(type);
+                            _pluginControllers.Add(controller);
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
 
+        }
 
         private void ViewForm_Load(object sender, EventArgs e)
         {
@@ -115,6 +148,7 @@ namespace BWHelper
         {
             this.targetHandle = targetHandle;
             sendMessageHwnd2 = Litfal.WinAPI.GetParent(targetHandle);
+            _pageControllerByMouseWheel.WindowHandle = sendMessageHwnd2;
 
             startCapture();
         }
@@ -142,10 +176,12 @@ namespace BWHelper
             }
 
             capturer.Start();
+            pluginsStart();
         }
 
         public void StopTasks()
         {
+            pluginsStop();
             if (thDraw != null)
             {
                 thDrawIsWork = false;
@@ -161,8 +197,8 @@ namespace BWHelper
                 capturer.Dispose();
                 capturer = null;
             }
+            
         }
-
 
         private void ViewWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
@@ -181,8 +217,27 @@ namespace BWHelper
             }
         }
 
+        private void pluginsStart()
+        {
+            _pluginControllers.ForEach(c => c.Start(_pageControllerByMouseWheel));
+        }
+        private void pluginsStop()
+        {
+            _pluginControllers.ForEach(c => c.Stop());
+        }
+        private void pluginsDispose()
+        {
+            _pluginControllers.ForEach(c =>
+            {
+                try
+                {
+                    c.Dispose();
+                }
+                catch (Exception) { }
+            });
+            _pluginControllers.Clear();
+        }
 
-        
 
         private void draw_proc_loop()
         {

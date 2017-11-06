@@ -52,11 +52,6 @@ namespace Litfal.CommonWinAPI.WinForm
             }
             CommonWinAPI.MouseControl.MouseEvent(hwnd, wmsg + 1, x, y);
         }
-
-        internal static void MouseWheel(IntPtr hwnd, int delta, int x, int y)
-        {
-            CommonWinAPI.MouseControl.MouseEvent(hwnd, WinAPI.WindowMessage.WM_MOUSEWHEEL, x, y, delta << 16);
-        }
     }
 }
 

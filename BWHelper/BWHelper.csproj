@@ -73,6 +73,9 @@
   <ItemGroup>
     <Compile Include="CaptureHelper.cs" />
     <Compile Include="CommonWinAPI.MouseControl.cs" />
+    <Compile Include="Plugins\BaseController.cs" />
+    <Compile Include="Plugins\IPageController.cs" />
+    <Compile Include="Plugins\PageControllerByMouseWheel.cs" />
     <Compile Include="SettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
