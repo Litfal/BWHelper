@@ -202,7 +202,7 @@ namespace BWHelper
 
         private void ViewWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-
+            pluginsDispose();
             try
             {
                 if (thDraw != null)
