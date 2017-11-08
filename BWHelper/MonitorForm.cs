@@ -110,7 +110,7 @@ namespace BWHelper
                 if (_viewForm == null)
                 {
                     _viewForm = new ViewForm();
-                    _viewForm.FormClosed += (s, e) => Application.Exit();
+                    _viewForm.FormClosed += (s, e) => Close();
                 }
                 _viewForm.Show(this);
                 _viewForm.StartCapture(bwHwnd);
@@ -191,7 +191,7 @@ namespace BWHelper
         }
 
 
-        private void MonitorForm_FormClosing(object sender, FormClosingEventArgs e)
+        protected override void OnFormClosing(FormClosingEventArgs e)
         {
             Properties.Settings.Default.Save();
             thMonitorIsWork = false;
@@ -199,10 +199,15 @@ namespace BWHelper
             {
                 thMonitor?.Join(2000);
                 thMonitor = null;
+                _viewForm?.Dispose();
+                _viewForm = null;
             }
             catch (Exception)
             {
             }
+            base.OnFormClosing(e);
+
+            Application.Exit();
         }
 
 

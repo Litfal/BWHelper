@@ -13,6 +13,11 @@ namespace BWHelper.Plugins.Input.AACUSB.Testing
             AACUSBController testController = new AACUSBController();
             testController.Start(new ConsolePageController());
             Console.ReadKey();
+            testController.Stop();
+            Console.ReadKey();
+
+            testController.Dispose();
+
         }
     }
 }

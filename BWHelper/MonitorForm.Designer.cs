@@ -108,7 +108,6 @@
             this.Name = "MonitorForm";
             this.Padding = new System.Windows.Forms.Padding(30, 30, 30, 30);
             this.Text = "BW Helper";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MonitorForm_FormClosing);
             this.Load += new System.EventHandler(this.MonitorForm_Load);
             this.pl_waitApp.ResumeLayout(false);
             this.pl_waitView.ResumeLayout(false);

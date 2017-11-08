@@ -72,8 +72,6 @@ namespace BWHelper
             pictureBox1.MouseMove += PictureBox1_MouseMove;
 
             this.Load += ViewForm_Load;
-            this.Closing += ViewWindow_Closing;
-
 
             page = new EBPage(settings);
 
@@ -203,7 +201,7 @@ namespace BWHelper
             
         }
 
-        private void ViewWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        protected override void OnFormClosing(FormClosingEventArgs e)
         {
             pluginsDispose();
             try
@@ -218,6 +216,7 @@ namespace BWHelper
                 capturer = null;
                 thDraw = null;
             }
+            base.OnFormClosing(e);
         }
 
         private void pluginsStart()
