@@ -116,8 +116,8 @@ namespace BWHelper
         {
             var settings = Properties.Settings.Default;
             WindowState = settings.Maximised ? FormWindowState.Maximized : FormWindowState.Normal;
-            Left = settings.Left;
-            Top = settings.Top;
+            Left = Math.Max(-20, settings.Left);
+            Top = Math.Max(-20, settings.Top);
             syncConfigUI();
             LocationChanged += ViewForm_LocationChanged;
             SizeChanged += ViewForm_SizeChanged;
@@ -140,8 +140,11 @@ namespace BWHelper
 
         private void ViewForm_LocationChanged(object sender, EventArgs e)
         {
-            Properties.Settings.Default.Left = this.Left;
-            Properties.Settings.Default.Top = this.Top;
+            if (WindowState == FormWindowState.Normal)
+            {
+                Properties.Settings.Default.Left = this.Left;
+                Properties.Settings.Default.Top = this.Top;
+            }
         }
 
         public void StartCapture(IntPtr targetHandle)
