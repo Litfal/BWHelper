@@ -140,8 +140,8 @@ namespace BWHelper
         {
             if (WindowState == FormWindowState.Normal)
             {
-                Properties.Settings.Default.Left = this.Left;
-                Properties.Settings.Default.Top = this.Top;
+                Properties.Settings.Default.Left = Left;
+                Properties.Settings.Default.Top = Top;
             }
         }
 

@@ -206,8 +206,6 @@ namespace BWHelper
             {
             }
             base.OnFormClosing(e);
-
-            Application.Exit();
         }
 
 

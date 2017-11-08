@@ -44,5 +44,8 @@
     <Setting Name="ReduceLightBluePercent" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">78</Value>
     </Setting>
+    <Setting Name="SettingsVersion" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
   </Settings>
 </SettingsFile>

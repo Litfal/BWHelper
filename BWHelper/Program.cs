@@ -15,8 +15,14 @@ namespace BWHelper
         static void Main()
         {
             if (System.Environment.OSVersion.Version.Major >= 6) { Litfal.WinAPI.SetProcessDPIAware(); }
+            var settings = Properties.Settings.Default;
+            if (settings.SettingsVersion != Application.ProductVersion)
+            {
+                settings.Upgrade();
+                settings.SettingsVersion = Application.ProductVersion;
+                settings.Save();
+            }
 
-            Properties.Settings.Default.Upgrade();
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
