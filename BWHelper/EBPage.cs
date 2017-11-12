@@ -96,16 +96,16 @@ namespace BWHelper
 
                 if (doNegativeColorProc)
                 {
-                    negativeColorProcess(bd, _bottomSliderY);
-                    //negativeColorProcessMT(bd, _bottomSliderY);
+                    //negativeColorProcess(bd, _bottomSliderY);
+                    negativeColorProcessMT(bd, _bottomSliderY);
                 }
 
                 if (doLightMixing)
                 {
                     //reduceBlueLight(bd, _bottomSliderY, 0.78);
                     //lightMixProcess(bd, _bottomSliderY, Config.LightMixingColor);
-                    reduceLightProcess(bd, _bottomSliderY, Settings.ReduceLightRedPercent, Settings.ReduceLightGreenPercent, Settings.ReduceLightBluePercent);
-                    //reduceLightProcessMT(bd, _bottomSliderY, Settings.ReduceLightRedPercent, Settings.ReduceLightGreenPercent, Settings.ReduceLightBluePercent);
+                    //reduceLightProcess(bd, _bottomSliderY, Settings.ReduceLightRedPercent, Settings.ReduceLightGreenPercent, Settings.ReduceLightBluePercent);
+                    reduceLightProcessMT(bd, _bottomSliderY, Settings.ReduceLightRedPercent, Settings.ReduceLightGreenPercent, Settings.ReduceLightBluePercent);
                 }
                 //negativeColorProcess(bd);
 
@@ -191,20 +191,30 @@ namespace BWHelper
 
             Parallel.ForEach(yParts, (yPart) =>
             {
-                byte* pY = (byte*)bd.Scan0 + yPart.Start * bd.Stride;
+                byte* pY0 = (byte*)bd.Scan0 + yPart.Start * bd.Stride;
+                byte* pY = pY0;
                 for (int y = yPart.Start; y < yPart.End; y++)
                 {
                     byte* pX = pY;
-                    for (int x = 0; x < bd.Width; x++)
+                    for (int x = 0; x < lightMixingExcludeX1; x++)
                     {
-                        if (x < lightMixingExcludeX1 || x > lightMixingExcludeX2)
-                        {
-                            *pX = (byte)((*pX * bP) >> 24); pX++;
-                            *pX = (byte)((*pX * gP) >> 24); pX++;
-                            *pX = (byte)((*pX * rP) >> 24); pX += 2;
-                        }
-                        else
-                            pX += 4;
+                        *pX = (byte)((*pX * bP) >> 24); pX++;
+                        *pX = (byte)((*pX * gP) >> 24); pX++;
+                        *pX = (byte)((*pX * rP) >> 24); pX += 2;
+                    }
+                    pY += bd.Stride;
+                }
+
+                int x2 = lightMixingExcludeX2 + 1;
+                pY = pY0 + x2 * 4;
+                for (int y = yPart.Start; y < yPart.End; y++)
+                {
+                    byte* pX = pY;
+                    for (int x = x2; x < bd.Width; x++)
+                    {
+                        *pX = (byte)((*pX * bP) >> 24); pX++;
+                        *pX = (byte)((*pX * gP) >> 24); pX++;
+                        *pX = (byte)((*pX * rP) >> 24); pX += 2;
                     }
                     pY += bd.Stride;
                 }
@@ -299,18 +309,32 @@ namespace BWHelper
 
             Parallel.ForEach(ranges, (yRange) =>
             {
-                byte* pY = (byte*)bd.Scan0 + yRange.Start * bd.Stride;
+                byte* pY0 = (byte*)bd.Scan0 + yRange.Start * bd.Stride;
+                byte* pY = pY0;
                 for (int y = yRange.Start; y < yRange.End; y++)
                 {
                     int* pX = (int*)pY;
-                    for (int x = 0; x < bd.Width; x++)
+                    for (int x = 0; x < negativeColorExcludeX1; x++)
                     {
-                        if (x < negativeColorExcludeX1 || x > negativeColorExcludeX2)
-                            *pX ^= 0xffffff;
+                        *pX ^= 0xffffff;
                         pX++;
                     }
                     pY += bd.Stride;
                 }
+
+                int x2 = negativeColorExcludeX2 + 1;
+                pY = pY0 + x2 * 4;
+                for (int y = yRange.Start; y < yRange.End; y++)
+                {
+                    int* pX = (int*)pY;
+                    for (int x = x2; x < bd.Width; x++)
+                    {
+                        *pX ^= 0xffffff;
+                        pX++;
+                    }
+                    pY += bd.Stride;
+                }
+
             });
 
             Debug.WriteLine("negativeColorProcessMT: {0} ms", watch.ElapsedMilliseconds);
