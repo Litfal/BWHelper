@@ -97,8 +97,9 @@ namespace BWHelper
                 if (doNegativeColorProc)
                 {
                     //negativeColorProcess(bd, _bottomSliderY);
-                    negativeColorProcess64(bd, _bottomSliderY);
                     //negativeColorProcessMT(bd, _bottomSliderY);
+                    //negativeColorProcess64(bd, _bottomSliderY);
+                    negativeColorProcess64MT(bd, _bottomSliderY);
                 }
 
                 if (doLightMixing)
@@ -300,53 +301,8 @@ namespace BWHelper
             Debug.WriteLine("negativeColorProcess: {0} ticks", watch.ElapsedTicks);
         }
 
-        private unsafe void negativeColorProcess64(BitmapData bd, int height)
-        {
-            var watch = Stopwatch.StartNew();
-
-            byte* pY = (byte*)bd.Scan0;
-            int x1 = negativeColorExcludeX1 / 2;
-            bool x1ov = (negativeColorExcludeX1 & 1) == 1;
-
-            for (int y = 0; y < height; y++)
-            {
-                long* pX = (long*)pY;
-                for (int x = 0; x < x1; x++)
-                {
-                    *pX ^= 0x00FFFFFF00FFFFFF;
-                    pX++;
-                }
-                if(x1ov)
-                    *(int*)pX ^= 0x00FFFFFF;
-                pY += bd.Stride;
-            }
-
-            int x2 = negativeColorExcludeX2 + 1;
-            int x2count32 = (bd.Width - x2);
-            int x2count64 = x2count32 / 2;
-            bool x2ov = (x2count32 & 1) == 1;
-
-            pY = (byte*)bd.Scan0 + x2 * 4;
-            for (int y = 0; y < height; y++)
-            {
-                long* pX = (long*)pY;
-                for (int x = 0; x < x2count64; x++)
-                {
-                    *pX ^= 0x00FFFFFF00FFFFFF;
-                    pX++;
-                }
-                if (x2ov)
-                    *(int*)pX ^= 0x00FFFFFF;
-                pY += bd.Stride;
-            }
-
-            Debug.WriteLine("negativeColorProcess64: {0} ticks", watch.ElapsedTicks);
-        }
-
         private unsafe void negativeColorProcessMT(BitmapData bd, int height)
         {
-            Debug.WriteLine("Stride: {0},{1}", bd.Width * 4, bd.Stride );
-
             var watch = Stopwatch.StartNew();
 
 
@@ -386,6 +342,98 @@ namespace BWHelper
             Debug.WriteLine("negativeColorProcessMT: {0} ticks", watch.ElapsedTicks);
         }
 
+        private unsafe void negativeColorProcess64(BitmapData bd, int height)
+        {
+            var watch = Stopwatch.StartNew();
+
+            byte* pY = (byte*)bd.Scan0;
+            int x1count64 = negativeColorExcludeX1 / 2;
+            bool x1ov = (negativeColorExcludeX1 & 1) == 1;
+
+            for (int y = 0; y < height; y++)
+            {
+                long* pX = (long*)pY;
+                for (int x = 0; x < x1count64; x++)
+                {
+                    *pX ^= 0x00FFFFFF00FFFFFF;
+                    pX++;
+                }
+                if (x1ov)
+                    *(int*)pX ^= 0x00FFFFFF;
+                pY += bd.Stride;
+            }
+
+            int x2 = negativeColorExcludeX2 + 1;
+            int x2count32 = (bd.Width - x2);
+            int x2count64 = x2count32 / 2;
+            bool x2ov = (x2count32 & 1) == 1;
+
+            pY = (byte*)bd.Scan0 + x2 * 4;
+            for (int y = 0; y < height; y++)
+            {
+                long* pX = (long*)pY;
+                for (int x = 0; x < x2count64; x++)
+                {
+                    *pX ^= 0x00FFFFFF00FFFFFF;
+                    pX++;
+                }
+                if (x2ov)
+                    *(int*)pX ^= 0x00FFFFFF;
+                pY += bd.Stride;
+            }
+
+            Debug.WriteLine("negativeColorProcess64: {0} ticks", watch.ElapsedTicks);
+        }
+
+        private unsafe void negativeColorProcess64MT(BitmapData bd, int height)
+        {
+            var watch = Stopwatch.StartNew();
+            
+            Range[] ranges = cutRanges(height);
+
+            Parallel.ForEach(ranges, (yRange) =>
+            {
+                byte* pY0 = (byte*)bd.Scan0 + yRange.Start * bd.Stride;
+                byte* pY = pY0;
+                int x1count64 = negativeColorExcludeX1 / 2;
+                bool x1ov = (negativeColorExcludeX1 & 1) == 1;
+
+                for (int y = yRange.Start; y < yRange.End; y++)
+                {
+                    long* pX = (long*)pY;
+                    for (int x = 0; x < x1count64; x++)
+                    {
+                        *pX ^= 0x00FFFFFF00FFFFFF;
+                        pX++;
+                    }
+                    if (x1ov)
+                        *(int*)pX ^= 0x00FFFFFF;
+                    pY += bd.Stride;
+                }
+
+                int x2 = negativeColorExcludeX2 + 1;
+                int x2count32 = (bd.Width - x2);
+                int x2count64 = x2count32 / 2;
+                bool x2ov = (x2count32 & 1) == 1;
+
+                pY = pY0 + x2 * 4;
+                for (int y = yRange.Start; y < yRange.End; y++)
+                {
+                    long* pX = (long*)pY;
+                    for (int x = 0; x < x2count64; x++)
+                    {
+                        *pX ^= 0x00FFFFFF00FFFFFF;
+                        pX++;
+                    }
+                    if (x2ov)
+                        *(int*)pX ^= 0x00FFFFFF;
+                    pY += bd.Stride;
+                }
+
+            });
+
+            Debug.WriteLine("negativeColorProcess64MT: {0} ticks", watch.ElapsedTicks);
+        }
 
         private unsafe void findPicArea(BitmapData bd, int height)
         {
