@@ -56,14 +56,15 @@ namespace BWHelper
 
                 _isColorPage = null;
                 _picAreaX1 = _picAreaX2 = -1;
-                negativeColorExcludeX1 = lightMixingExcludeX1 = 60000;
-                negativeColorExcludeX2 = lightMixingExcludeX2 = 0;
+                negativeColorExcludeX1 = lightMixingExcludeX1 = 0;
+                negativeColorExcludeX2 = lightMixingExcludeX2 = -1;
 
                 bool doNegativeColorProc = Settings.NegativeColor;
                 if (doNegativeColorProc && Settings.NegativeColorOffWithColorPage)
                 {
                     // check is color page
-                    _isColorPage = findNotGaryColor(bd, _bottomSliderY);
+                    // _isColorPage = findNotGaryColor(bd, _bottomSliderY);
+                    _isColorPage = findNotGaryColorMT(bd, _bottomSliderY);
                     doNegativeColorProc = _isColorPage != true;
                 }
                 if (doNegativeColorProc && Settings.NegativeColorOffWithPictureArea)
@@ -78,7 +79,10 @@ namespace BWHelper
                 if (doLightMixing && Settings.ReduceLightOffWithColorPage)
                 {
                     if (_isColorPage == null)
-                        _isColorPage = findNotGaryColor(bd, _bottomSliderY);
+                    {
+                        // _isColorPage = findNotGaryColor(bd, _bottomSliderY);
+                        _isColorPage = findNotGaryColorMT(bd, _bottomSliderY);
+                    }
                     doLightMixing = _isColorPage != true;
                 }
 
@@ -91,15 +95,19 @@ namespace BWHelper
                 }
 
                 if (doNegativeColorProc)
+                {
                     negativeColorProcess(bd, _bottomSliderY);
-
+                    //negativeColorProcessMT(bd, _bottomSliderY);
+                }
 
                 if (doLightMixing)
+                {
                     //reduceBlueLight(bd, _bottomSliderY, 0.78);
                     //lightMixProcess(bd, _bottomSliderY, Config.LightMixingColor);
                     reduceLightProcess(bd, _bottomSliderY, Settings.ReduceLightRedPercent, Settings.ReduceLightGreenPercent, Settings.ReduceLightBluePercent);
-
-                    //negativeColorProcess(bd);
+                    //reduceLightProcessMT(bd, _bottomSliderY, Settings.ReduceLightRedPercent, Settings.ReduceLightGreenPercent, Settings.ReduceLightBluePercent);
+                }
+                //negativeColorProcess(bd);
 
             }
             finally
@@ -134,31 +142,90 @@ namespace BWHelper
         private unsafe void reduceLightProcess(BitmapData bd, int height, int rPercent, int gPercent, int bPercent)
         {
             var watch = Stopwatch.StartNew();
-            
+
             uint rP = (uint)(rPercent * (1 << 24) / 100);
             uint gP = (uint)(gPercent * (1 << 24) / 100);
             uint bP = (uint)(bPercent * (1 << 24) / 100);
 
-
+            
             byte* pY = (byte*)bd.Scan0;
             for (int y = 0; y < height; y++)
             {
                 byte* pX = pY;
-                for (int x = 0; x < bd.Width; x++)
+                for (int x = 0; x < lightMixingExcludeX1; x++)
                 {
-                    if (x < lightMixingExcludeX1 || x > lightMixingExcludeX2)
-                    {
-                        *pX = (byte)((*pX * bP) >> 24); pX++;
-                        *pX = (byte)((*pX * gP) >> 24); pX++;
-                        *pX = (byte)((*pX * rP) >> 24); pX += 2;
-                    }
-                    else
-                        pX += 4;
+                    *pX = (byte)((*pX * bP) >> 24); pX++;
+                    *pX = (byte)((*pX * gP) >> 24); pX++;
+                    *pX = (byte)((*pX * rP) >> 24); pX += 2;
+                }
+                pY += bd.Stride;
+            }
+
+            int x2 = lightMixingExcludeX2 + 1;
+            pY = (byte*)bd.Scan0 + x2 * 4;
+            for (int y = 0; y < height; y++)
+            {
+                byte* pX = pY;
+                for (int x = x2; x < bd.Width; x++)
+                {
+                    *pX = (byte)((*pX * bP) >> 24); pX++;
+                    *pX = (byte)((*pX * gP) >> 24); pX++;
+                    *pX = (byte)((*pX * rP) >> 24); pX += 2;
                 }
                 pY += bd.Stride;
             }
 
             Debug.WriteLine("lightReduceProcess: {0} ms", watch.ElapsedMilliseconds);
+        }
+
+        private unsafe void reduceLightProcessMT(BitmapData bd, int height, int rPercent, int gPercent, int bPercent)
+        {
+            var watch = Stopwatch.StartNew();
+
+            uint rP = (uint)(rPercent * (1 << 24) / 100);
+            uint gP = (uint)(gPercent * (1 << 24) / 100);
+            uint bP = (uint)(bPercent * (1 << 24) / 100);
+
+            //int xStart = lightMixingExcludeX1;
+            Range[] yParts = cutRanges(height);
+
+            Parallel.ForEach(yParts, (yPart) =>
+            {
+                byte* pY = (byte*)bd.Scan0 + yPart.Start * bd.Stride;
+                for (int y = yPart.Start; y < yPart.End; y++)
+                {
+                    byte* pX = pY;
+                    for (int x = 0; x < bd.Width; x++)
+                    {
+                        if (x < lightMixingExcludeX1 || x > lightMixingExcludeX2)
+                        {
+                            *pX = (byte)((*pX * bP) >> 24); pX++;
+                            *pX = (byte)((*pX * gP) >> 24); pX++;
+                            *pX = (byte)((*pX * rP) >> 24); pX += 2;
+                        }
+                        else
+                            pX += 4;
+                    }
+                    pY += bd.Stride;
+                }
+            });
+
+            Debug.WriteLine("lightReduceProcessMT: {0} ms", watch.ElapsedMilliseconds);
+        }
+
+        private Range[] cutRanges(int height)
+        {
+            int rangeCount = Environment.ProcessorCount * 2;
+            int yPartH = height / rangeCount;
+
+            return Enumerable
+                .Range(0, rangeCount)
+                .Select(yPartIndex => new Range
+                {
+                    Start = yPartH * yPartIndex,
+                    End = yPartIndex == rangeCount - 1 ? height : yPartH * (yPartIndex + 1)
+                })
+                .ToArray();
         }
 
         private unsafe void lightMixProcess(BitmapData bd, int height, int lightColor)
@@ -193,22 +260,60 @@ namespace BWHelper
         private unsafe void negativeColorProcess(BitmapData bd, int height)
         {
             var watch = Stopwatch.StartNew();
-
-            int* p = (int*)bd.Scan0;
+            
             byte* pY = (byte*)bd.Scan0;
             for (int y = 0; y < height; y++)
             {
                 int* pX = (int*)pY;
-                for (int x = 0; x < bd.Width; x++)
+                for (int x = 0; x < negativeColorExcludeX1; x++)
                 {
-                    if (x < negativeColorExcludeX1 || x > negativeColorExcludeX2)
-                        *pX ^= 0xffffff;
+                    *pX ^= 0xffffff;
+                    pX++;
+                }
+                pY += bd.Stride;
+            }
+
+            int x2 = negativeColorExcludeX2 + 1;
+            pY = (byte*)bd.Scan0 + x2 * 4;
+            for (int y = 0; y < height; y++)
+            {
+                int* pX = (int*)pY;
+                for (int x = x2; x < bd.Width; x++)
+                {
+                    *pX ^= 0xffffff;
                     pX++;
                 }
                 pY += bd.Stride;
             }
 
             Debug.WriteLine("negativeColorProcess: {0} ms", watch.ElapsedMilliseconds);
+        }
+
+        private unsafe void negativeColorProcessMT(BitmapData bd, int height)
+        {
+            var watch = Stopwatch.StartNew();
+
+
+            //int xStart = lightMixingExcludeX1;
+            Range[] ranges = cutRanges(height);
+
+            Parallel.ForEach(ranges, (yRange) =>
+            {
+                byte* pY = (byte*)bd.Scan0 + yRange.Start * bd.Stride;
+                for (int y = yRange.Start; y < yRange.End; y++)
+                {
+                    int* pX = (int*)pY;
+                    for (int x = 0; x < bd.Width; x++)
+                    {
+                        if (x < negativeColorExcludeX1 || x > negativeColorExcludeX2)
+                            *pX ^= 0xffffff;
+                        pX++;
+                    }
+                    pY += bd.Stride;
+                }
+            });
+
+            Debug.WriteLine("negativeColorProcessMT: {0} ms", watch.ElapsedMilliseconds);
         }
 
 
@@ -281,7 +386,7 @@ namespace BWHelper
             else
             {
                 _picAreaX1 = 0;
-                _picAreaX2 = 0;
+                _picAreaX2 = -1;
             }
 
             Debug.WriteLine("findPicArea: {0} ms", watch.ElapsedMilliseconds);
@@ -337,6 +442,68 @@ namespace BWHelper
             double deltaRate = (double)deltaSum / (height * bd.Width);
             double deltaRate2 = (double)deltaSum / (height * bd.Width - whiteCount);
             Debug.WriteLine("findNotGaryColor: deltaSum={0}, deltaMax={1}, deltaRate={2}, deltaRate2={3}, {4} ms", deltaSum, deltaMax, deltaRate, deltaRate2, watch.ElapsedMilliseconds);
+            const long FindColorDeltaSumTh = 1000000;
+            const double deltaRate2Th = 10;
+            return deltaRate2 > deltaRate2Th;
+        }
+
+        private unsafe bool findNotGaryColorMT(BitmapData bd, int height)
+        {
+            var watch = Stopwatch.StartNew();
+            const int white = unchecked((int)0xFFFFFFFF);
+            // long deltaSum = 0;
+
+            Range[] yRanges = cutRanges(height);
+            long[] deltaSumArr = new long[yRanges.Length];
+            int[] whiteCountArr = new int[yRanges.Length];
+            Parallel.For(0, yRanges.Length,
+                index =>
+                {
+                    var yRange = yRanges[index];
+                    long deltaSumPart = 0;
+                    int whiteCountPart = 0;
+                    byte M;
+                    byte m;
+                    byte* pY = (byte*)bd.Scan0 + yRange.Start * bd.Stride;
+                    for (int y = yRange.Start; y < yRange.End; y++)
+                    {
+                        byte* pX = pY;
+                        for (int x = 0; x < bd.Width; x++)
+                        {
+                            if (*(int*)pX == white) whiteCountPart++;
+                            byte b = *(pX + 1);
+                            byte r = *(pX + 2);
+                            if (*pX > b)
+                            {
+                                M = *pX;
+                                m = b;
+                            }
+                            else
+                            {
+                                M = b;
+                                m = *pX;
+                            }
+                            if (r > M)
+                                M = r;
+                            if (r < m)
+                                m = r;
+
+                            int delta = M - m;
+                            deltaSumPart += delta;
+
+                            pX += 4;
+                        }
+                        pY += bd.Stride;
+                    }
+                    deltaSumArr[index] = deltaSumPart;
+                    whiteCountArr[index] = whiteCountPart;
+                });
+
+            long deltaSum = deltaSumArr.Sum();
+            long whiteCount = whiteCountArr.Sum();
+            double deltaRate = (double)deltaSum / (height * bd.Width);
+            double deltaRate2 = (double)deltaSum / (height * bd.Width - whiteCount);
+            Debug.WriteLine("findNotGaryColorMT: deltaSum={0}, deltaRate={1}, deltaRate2={2}, {3} ms", deltaSum, deltaRate, deltaRate2, watch.ElapsedMilliseconds);
             const long FindColorDeltaSumTh = 1000000;
             const double deltaRate2Th = 10;
             return deltaRate2 > deltaRate2Th;
@@ -456,5 +623,9 @@ namespace BWHelper
         }
     }
 
-    
+    internal class Range
+    {
+        public int Start { get; set; }
+        public int End { get; set; }
+    }
 }
