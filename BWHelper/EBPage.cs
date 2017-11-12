@@ -44,6 +44,7 @@ namespace BWHelper
         public void Process(Bitmap bmp)
         {
             if (bmp == null) throw new ArgumentNullException();
+            var watch = Stopwatch.StartNew();
             // if (!Config.AnyProcess) return;
             var bd = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
             try
@@ -63,8 +64,8 @@ namespace BWHelper
                 if (doNegativeColorProc && Settings.NegativeColorOffWithColorPage)
                 {
                     // check is color page
-                    // _isColorPage = findNotGaryColor(bd, _bottomSliderY);
-                    _isColorPage = findNotGaryColorMT(bd, _bottomSliderY);
+                    _isColorPage = findNotGaryColor(bd, _bottomSliderY);
+                    //_isColorPage = findNotGaryColorMT(bd, _bottomSliderY);
                     doNegativeColorProc = _isColorPage != true;
                 }
                 if (doNegativeColorProc && Settings.NegativeColorOffWithPictureArea)
@@ -80,8 +81,8 @@ namespace BWHelper
                 {
                     if (_isColorPage == null)
                     {
-                        // _isColorPage = findNotGaryColor(bd, _bottomSliderY);
-                        _isColorPage = findNotGaryColorMT(bd, _bottomSliderY);
+                        _isColorPage = findNotGaryColor(bd, _bottomSliderY);
+                        //_isColorPage = findNotGaryColorMT(bd, _bottomSliderY);
                     }
                     doLightMixing = _isColorPage != true;
                 }
@@ -98,18 +99,20 @@ namespace BWHelper
                 {
                     //negativeColorProcess(bd, _bottomSliderY);
                     //negativeColorProcessMT(bd, _bottomSliderY);
-                    //negativeColorProcess64(bd, _bottomSliderY);
-                    negativeColorProcess64MT(bd, _bottomSliderY);
+                    negativeColorProcess64(bd, _bottomSliderY);
+                    //negativeColorProcess64MT(bd, _bottomSliderY);
                 }
 
                 if (doLightMixing)
                 {
                     //reduceBlueLight(bd, _bottomSliderY, 0.78);
                     //lightMixProcess(bd, _bottomSliderY, Config.LightMixingColor);
-                    //reduceLightProcess(bd, _bottomSliderY, Settings.ReduceLightRedPercent, Settings.ReduceLightGreenPercent, Settings.ReduceLightBluePercent);
-                    reduceLightProcessMT(bd, _bottomSliderY, Settings.ReduceLightRedPercent, Settings.ReduceLightGreenPercent, Settings.ReduceLightBluePercent);
+                    reduceLightProcess(bd, _bottomSliderY, Settings.ReduceLightRedPercent, Settings.ReduceLightGreenPercent, Settings.ReduceLightBluePercent);
+                    //reduceLightProcessMT(bd, _bottomSliderY, Settings.ReduceLightRedPercent, Settings.ReduceLightGreenPercent, Settings.ReduceLightBluePercent);
                 }
                 //negativeColorProcess(bd);
+                Debug.WriteLine("Process total: {0} ms", watch.ElapsedMilliseconds);
+
 
             }
             finally
