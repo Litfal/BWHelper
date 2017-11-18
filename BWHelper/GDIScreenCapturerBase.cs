@@ -214,11 +214,12 @@ namespace BWHelper
 
         public void Dispose()
         {
+            if (disposing) return;
             disposing = true;
             try
             {
-                workThread.Join(1000);
-                workThread.Abort();
+                workThread?.Join(1000);
+                workThread?.Abort();
             }
             finally
             {

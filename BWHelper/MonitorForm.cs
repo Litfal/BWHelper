@@ -31,6 +31,16 @@ namespace BWHelper
 
         private void MonitorForm_Load(object sender, EventArgs e)
         {
+            cb_autorunApp.Checked = Properties.Settings.Default.AutorunBookWalker;
+            var findResult = findBookWalker();
+            if (!findResult.ProcessRunning &&
+                Properties.Settings.Default.AutorunBookWalker &&
+                !string.IsNullOrEmpty(Properties.Settings.Default.BWPath) &&
+                File.Exists(Properties.Settings.Default.BWPath))
+            {
+                startBookWalker(Properties.Settings.Default.BWPath);
+            }
+
             thMonitorIsWork = true;
             thMonitor = new System.Threading.Thread(monitorLoop);
             thMonitor.Start();
@@ -229,13 +239,18 @@ namespace BWHelper
                     ofd.InitialDirectory = dirName;
                     if (ofd.ShowDialog(this) == DialogResult.OK)
                     {
-                        Process.Start(ofd.FileName);
+                        startBookWalker(ofd.FileName);
                     }
                 }
             }
             else
-                Process.Start(path);
+                startBookWalker(path);
         }
 
+        private void startBookWalker(string path)
+        {
+            Process.Start(path);
+            Properties.Settings.Default.AutorunBookWalker = cb_autorunApp.Checked;
+        }
     }
 }
