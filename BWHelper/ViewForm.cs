@@ -67,9 +67,9 @@ namespace BWHelper
         {
             InitializeComponent();
 
-            pictureBox1.MouseDown += PictureBox1_MouseDown;
-            pictureBox1.MouseUp += PictureBox1_MouseUp;
-            pictureBox1.MouseMove += PictureBox1_MouseMove;
+            Pb_Main.MouseDown += Pb_Main_MouseDown;
+            Pb_Main.MouseUp += Pb_Main_MouseUp;
+            Pb_Main.MouseMove += Pb_Main_MouseMove;
 
             this.Load += ViewForm_Load;
 
@@ -131,7 +131,7 @@ namespace BWHelper
                     break;
                 case FormWindowState.Normal:
                     Properties.Settings.Default.Maximised = false;
-                    pictureBox1.Image = pictureBox1.Image;  // autosize 
+                    Pb_Main.Image = Pb_Main.Image;  // autosize 
                     break;
             }
         }
@@ -276,7 +276,7 @@ namespace BWHelper
 
         private void onGetCaptureData(Bitmap bmp)
         {
-            Invoke(new Action(() => pictureBox1.Image = bmp));
+            Invoke(new Action(() => Pb_Main.Image = bmp));
         }
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
@@ -285,18 +285,18 @@ namespace BWHelper
 
         #region Keyboard / Mouse Relay
 
-        private void PictureBox1_MouseMove(object sender, MouseEventArgs e)
+        private void Pb_Main_MouseMove(object sender, MouseEventArgs e)
         {
             Litfal.CommonWinAPI.WinForm.MouseControl.MouseMove(targetHandle, e.X, e.Y);
         }
 
 
-        private void PictureBox1_MouseDown(object sender, MouseEventArgs e)
+        private void Pb_Main_MouseDown(object sender, MouseEventArgs e)
         {
             Litfal.CommonWinAPI.WinForm.MouseControl.MouseDown(targetHandle, e.Button, e.X, e.Y);
         }
 
-        private void PictureBox1_MouseUp(object sender, MouseEventArgs e)
+        private void Pb_Main_MouseUp(object sender, MouseEventArgs e)
         {
             Litfal.CommonWinAPI.WinForm.MouseControl.MouseUp(targetHandle, e.Button, e.X, e.Y);
         }
